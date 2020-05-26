@@ -27,7 +27,9 @@ urlpatterns = [
     url(r'^logout/', views.logout),
     url(r'^captcha', include('captcha.urls')),
     url(r'^$', views.index),
-    url(r'^spider/', views.spider_code),
+    url(r'^spider_github/', views.spider_code),
     url(r'^export/', views.export_data),
+    url(r'^spider_userid/',views.spider_userid),
+
 ]
 

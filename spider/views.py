@@ -7,6 +7,7 @@ from .forms import UserForm, RegisterForm
 import hashlib
 import time
 from django.http import JsonResponse
+from .userid_spider import get_userinfo
 
 
 # Create your views here.
@@ -101,7 +102,7 @@ def hash_code(s, salt='mysite'):# 加点盐
 def spider_code(request):
     global user, ow_times
     if request.method == "POST":
-        user = request.POST.get('name')
+        user = request.POST.get('github_name')
         github_url = 'https://api.github.com/users/' + user
         new_task = models.Tasks.objects.create()
         time_local = time.localtime()
@@ -132,12 +133,12 @@ def spider_code(request):
         result_task.task_id = user + ow_times
         result_task.save()
 
-        return render(request, "page.html", {'data': parsedData, 'response': message})
+        return render(request, "page.html", {'data_github': parsedData, 'response_github': message})
 
     return render(request, "page.html")
 
 
-def export_data(request, *args, **kwargs):
+def export_data(request):
     if request.method == "POST":
         task_create_time = user + ow_times
         results = models.TeskResults.objects.get(task_id = task_create_time)
@@ -172,5 +173,13 @@ def export_data(request, *args, **kwargs):
     return render(request,"page.html")
 
 
-#
+def spider_userid(request):
+    if request.method == "POST":
+        userid = request.POST.get("userid")
+        parsedData, message = get_userinfo(userid)
+        print(parsedData)
+        return render(request, "page.html", {'data_userid': parsedData, 'response_userid': message})
+
+
+    return render(request, "page.html")
 
