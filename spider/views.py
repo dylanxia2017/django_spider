@@ -108,7 +108,7 @@ def spider_code(request):
         time_local = time.localtime()
         ow_times = time.strftime("%Y-%m-%d-%H-%M-%S", time_local)
         new_task.git_name = user + ow_times
-        print(user, ow_times)
+        # print(user, ow_times)
         new_task.save()
 
         tasks_lists = models.Tasks.objects.all()
@@ -122,7 +122,6 @@ def spider_code(request):
 
         parsedData, message = git_spider(github_url)
         models.Tasks.objects.filter(git_name=user + ow_times).update(status=1)
-        print(parsedData)
         result_task = models.TeskResults.objects.create()
         result_task.name = parsedData[0]['name']
         result_task.blog = parsedData[0]['blog']

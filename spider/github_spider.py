@@ -6,7 +6,6 @@ from time import sleep
 
 def git_spider(url):
     req = requests.get(url)
-    sleep(10)
     parsedData = []
     jsonList = []
     jsonList.append(req.json())
