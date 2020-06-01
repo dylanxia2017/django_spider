@@ -8,6 +8,8 @@ import hashlib
 import time
 from django.http import JsonResponse
 from .userid_spider import get_userinfo
+import pymysql
+from time import sleep
 
 
 # Create your views here.
@@ -104,33 +106,79 @@ def spider_code(request):
     if request.method == "POST":
         user = request.POST.get('github_name')
         github_url = 'https://api.github.com/users/' + user
-        new_task = models.Tasks.objects.create()
+        conn = pymysql.connect(host='127.0.0.1', port=3306, user='root', password='abc123456',
+                               charset='utf8', database='django_spider')
+        cursor = conn.cursor()
         time_local = time.localtime()
         ow_times = time.strftime("%Y-%m-%d-%H-%M-%S", time_local)
-        new_task.git_name = user + ow_times
-        # print(user, ow_times)
-        new_task.save()
+        create_time = time.strftime("%Y-%m-%d %H:%M:%S", time_local)
+        git_name = user + ow_times
 
-        tasks_lists = models.Tasks.objects.all()
-        executing_task = 0
-        for task in tasks_lists:
-            if task.status == 0:
-                executing_task += 1
-                if executing_task >= 3:
-                    message_executing = "当前已经有两个任务正在执行，请稍后"
-                    return render(request,"page.html",{'response_executing':message_executing})
+        sql_insert = "insert into spider_tasks(create_time,status, git_name) values ('%s','0','%s')" % (
+        create_time, git_name)
+        try:
+            cursor.execute(sql_insert)
+            conn.commit()
+            print("开始数据库插入操作")
+        except Exception as e:
+            conn.rollback()
+            print("数据库回滚")
+        finally:
+            conn.close()
+
+
+
+        conn = pymysql.connect(host='127.0.0.1', port=3306, user='root', password='abc123456',
+                               charset='utf8', database='django_spider')
+        cursor = conn.cursor()
+        sql_fetch = "select * from spider_tasks where status = 0"
+        try:
+            cursor.execute(sql_fetch)
+            results = cursor.fetchall()
+            if len(results) >= 2:
+                message_executing = "当前已经有两个任务正在执行，请稍后"
+                return render(request, "page.html", {'response_executing': message_executing})
+        except Exception as e:
+            raise e
+        finally:
+            conn.close()
+
+
+        # tasks_lists = models.Tasks.objects.all()
+        # executing_task = 0
+        # for task in tasks_lists:
+        #     if task.status == 0:
+        #         executing_task += 1
+        #         if executing_task >= 3:
+        #             message_executing = "当前已经有两个任务正在执行，请稍后"
+        #             return render(request,"page.html",{'response_executing':message_executing})
 
         parsedData, message = git_spider(github_url)
-        models.Tasks.objects.filter(git_name=user + ow_times).update(status=1)
-        result_task = models.TeskResults.objects.create()
-        result_task.name = parsedData[0]['name']
-        result_task.blog = parsedData[0]['blog']
-        result_task.public_repo_num = parsedData[0]["public_repos"]
-        result_task.following_num = parsedData[0]["following"]
-        result_task.follower_num = parsedData[0]["followers"]
-        result_task.public_gists_num = parsedData[0]["public_gists"]
-        result_task.task_id = user + ow_times
-        result_task.save()
+        conn = pymysql.connect(host='127.0.0.1', port=3306, user='root', password='abc123456',
+                               charset='utf8', database='django_spider')
+        cursor = conn.cursor()
+        sql_update = "update django_spider.spider_tasks set status = '1' where git_name = '%s'" % git_name
+        try:
+            cursor.execute(sql_update)
+            conn.commit()
+            print("开始数据库更新操作")
+        except Exception as e:
+            conn.rollback()
+            print("数据库更新操作错误回滚")
+        finally:
+            conn.close()
+
+
+        # models.Tasks.objects.filter(git_name=user + ow_times).update(status=1)
+        # result_task = models.TeskResults.objects.create()
+        # result_task.name = parsedData[0]['name']
+        # result_task.blog = parsedData[0]['blog']
+        # result_task.public_repo_num = parsedData[0]["public_repos"]
+        # result_task.following_num = parsedData[0]["following"]
+        # result_task.follower_num = parsedData[0]["followers"]
+        # result_task.public_gists_num = parsedData[0]["public_gists"]
+        # result_task.task_id = user + ow_times
+        # result_task.save()
 
         return render(request, "page.html", {'data_github': parsedData, 'response_github': message})
 
