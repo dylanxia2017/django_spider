@@ -53,7 +53,6 @@ def register(request):
             password1 = register_form.cleaned_data['password1']
             password2 = register_form.cleaned_data['password2']
             email = register_form.cleaned_data['email']
-            sex = register_form.cleaned_data['sex']
             if password1 != password2:  # 判断两次密码是否相同
                 message = "两次输入的密码不同！"
                 return render(request, 'login/register.html', locals())
@@ -73,7 +72,6 @@ def register(request):
                 new_user.name = username
                 new_user.password = hash_code(password1)
                 new_user.email = email
-                new_user.sex = sex
                 new_user.save()
                 return redirect('/login/')  # 自动跳转到登录页面
     register_form = RegisterForm()
@@ -99,6 +97,25 @@ def hash_code(s, salt='mysite'):# 加点盐
     return h.hexdigest()
 
 
+def check_status():
+    conn = pymysql.connect(host='127.0.0.1', port=3306, user='root', password='abc123456',
+                           charset='utf8', database='django_spider')
+    cursor = conn.cursor()
+    sql_fetch = "select * from spider_tasks where status = 0"
+    try:
+        cursor.execute(sql_fetch)
+        results = cursor.fetchall()
+        if len(results) >= 2:
+            status = "Running"
+        else:
+            status = "finished"
+    except Exception as e:
+        raise e
+
+    finally:
+        cursor.close()
+
+    return status
 
 
 def spider_code(request):
@@ -127,33 +144,14 @@ def spider_code(request):
             conn.close()
 
 
-
-        conn = pymysql.connect(host='127.0.0.1', port=3306, user='root', password='abc123456',
-                               charset='utf8', database='django_spider')
-        cursor = conn.cursor()
-        sql_fetch = "select * from spider_tasks where status = 0"
-        try:
-            cursor.execute(sql_fetch)
-            results = cursor.fetchall()
-            if len(results) >= 2:
-                message_executing = "当前已经有两个任务正在执行，请稍后"
-                return render(request, "page.html", {'response_executing': message_executing})
-        except Exception as e:
-            raise e
-        finally:
-            conn.close()
-
-
-        # tasks_lists = models.Tasks.objects.all()
-        # executing_task = 0
-        # for task in tasks_lists:
-        #     if task.status == 0:
-        #         executing_task += 1
-        #         if executing_task >= 3:
-        #             message_executing = "当前已经有两个任务正在执行，请稍后"
-        #             return render(request,"page.html",{'response_executing':message_executing})
-
+        status = check_status()
+        print("当前的状态是: ", status)
+        while status == "Running":
+            sleep(100)
+            status = check_status()
+            print(status)
         parsedData, message = git_spider(github_url)
+
         conn = pymysql.connect(host='127.0.0.1', port=3306, user='root', password='abc123456',
                                charset='utf8', database='django_spider')
         cursor = conn.cursor()
@@ -168,6 +166,38 @@ def spider_code(request):
         finally:
             conn.close()
 
+        return render(request, "page.html", {'data_github': parsedData, 'response_github': message})
+
+    return render(request, "page.html")
+
+        # return render(request, "page.html")
+        # conn = pymysql.connect(host='127.0.0.1', port=3306, user='root', password='abc123456',
+        #                        charset='utf8', database='django_spider')
+        # cursor = conn.cursor()
+        # sql_fetch = "select * from spider_tasks where status = 0"
+        # try:
+        #     cursor.execute(sql_fetch)
+        #     results = cursor.fetchall()
+        #     if len(results) >= 2:
+        #         sleep(100)
+                 # message_executing = "当前已经有两个任务正在执行，请稍后"
+                 # return render(request, "page.html", {'response_executing': message_executing})
+        # except Exception as e:
+        #     raise e
+        # finally:
+        #     conn.close()
+
+
+        # tasks_lists = models.Tasks.objects.all()
+        # executing_task = 0
+        # for task in tasks_lists:
+        #     if task.status == 0:
+        #         executing_task += 1
+        #         if executing_task >= 3:
+        #             message_executing = "当前已经有两个任务正在执行，请稍后"
+        #             return render(request,"page.html",{'response_executing':message_executing})
+
+
 
         # models.Tasks.objects.filter(git_name=user + ow_times).update(status=1)
         # result_task = models.TeskResults.objects.create()
@@ -180,9 +210,6 @@ def spider_code(request):
         # result_task.task_id = user + ow_times
         # result_task.save()
 
-        return render(request, "page.html", {'data_github': parsedData, 'response_github': message})
-
-    return render(request, "page.html")
 
 
 def export_data(request):

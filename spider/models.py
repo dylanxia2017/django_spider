@@ -5,11 +5,6 @@ from datetime import datetime
 class User(models.Model):
     '''用户表'''
 
-    gender = (
-        ('male','男'),
-        ('female','女'),
-    )
-
     name = models.CharField(max_length=128,unique=True)
     password = models.CharField(max_length=256)
     email = models.EmailField(unique=True)
@@ -22,7 +17,6 @@ class User(models.Model):
         ordering = ['c_time']
         verbose_name = '用户'
         verbose_name_plural = '用户'
-
 
 
 
